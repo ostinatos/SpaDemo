@@ -231,10 +231,19 @@ spa.shell = (function () {
     .attr('title', configMap.chat_retracted_title)
     .on('click', onClickChat);
 
+    //set schema to uriAnchor, so that it can check unformal arguments
+    $.uriAnchor.configModule({
+      schema_map : configMap.anchor_schema_map
+    });
+
     //bind onhashchange event handler
     $(window)
     .on('hashchange', onHashchange)
     .trigger('hashchange');//ensure hashchange event trigger for initial request
+
+    //configure chat module
+    spa.chat.configModule({});
+    spa.chat.initModule(jqueryMap.$chat);
 
     // test toggle
     // setTimeout( function () {toggleChat( true ); }, 3000 );
