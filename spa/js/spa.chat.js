@@ -72,7 +72,10 @@ spa.chat = (function () {
 
     setJqueryMap, configModule, initModule,
     getEmSize, setPxSizes, setSliderPosition,
-    onClickToggle
+    onClickToggle,
+    removeSlider, onClickRemoveSlider,
+    handleResize,
+    sliderStateEnum
     ;
   //----------------- END MODULE SCOPE VARIABLES ---------------
 
@@ -82,6 +85,19 @@ spa.chat = (function () {
       getComputedStyle( elem, '' ).fontSize.match(/\d*\.?\d*/)[0]
     );
   };
+
+  //enum for slider state
+  sliderStateEnum = (function(){
+    var openedState = 'opened';
+    var closedState = 'closed';
+    var hiddenState = 'hidden';
+    return {
+      OPENED:openedState,
+      CLOSED:closedState,
+      HIDDEN:hiddenState
+    };
+  })();
+
   //-------------------- END UTILITY METHODS -------------------
 
   //--------------------- BEGIN DOM METHODS --------------------
@@ -102,7 +118,8 @@ spa.chat = (function () {
       $sizer  : $slider.find( '.spa-chat-sizer' ),
       $msgs   : $slider.find( '.spa-chat-msgs' ),
       $box    : $slider.find( '.spa-chat-box' ),
-      $input  : $slider.find( '.spa-chat-input input[type=text]')
+      $input  : $slider.find( '.spa-chat-input input[type=text]'),
+      $spaChatCloser: $slider.find('.spa-chat-closer')
     };
   };
   // End DOM method /setJqueryMap/
@@ -153,21 +170,21 @@ spa.chat = (function () {
 
     // prepare animate parameters
     switch ( position_type ){
-      case 'opened' :
+      case sliderStateEnum.OPENED :
         height_px    = stateMap.slider_opened_px;
         animate_time = configMap.slider_open_time;
         slider_title = configMap.slider_opened_title;
         toggle_text  = '=';
       break;
 
-      case 'hidden' :
+      case sliderStateEnum.HIDDEN :
         height_px    = 0;
         animate_time = configMap.slider_open_time;
         slider_title = '';
         toggle_text  = '+';
       break;
 
-      case 'closed' :
+      case sliderStateEnum.CLOSED :
         height_px    = stateMap.slider_closed_px;
         animate_time = configMap.slider_close_time;
         slider_title = configMap.slider_closed_title;
@@ -199,14 +216,21 @@ spa.chat = (function () {
   //click event handler to response to user action, set the anchor
   onClickToggle = function ( event ){
     var set_chat_anchor = configMap.set_chat_anchor;
-    if ( stateMap.position_type === 'opened' ) {
-      set_chat_anchor( 'closed' );
+    if ( stateMap.position_type === sliderStateEnum.OPENED ) {
+      set_chat_anchor( sliderStateEnum.CLOSED );
     }
-    else if ( stateMap.position_type === 'closed' ){
-      set_chat_anchor( 'opened' );
+    else if ( stateMap.position_type === sliderStateEnum.CLOSED ){
+      set_chat_anchor( sliderStateEnum.OPENED );
     }
     return false;
   };
+
+  //click event handler to response to close slider action
+  onClickRemoveSlider = function(event){
+    removeSlider();
+    return false;
+  }
+
   //-------------------- END EVENT HANDLERS --------------------
 
   //------------------- BEGIN PUBLIC METHODS -------------------
@@ -263,15 +287,41 @@ spa.chat = (function () {
     jqueryMap.$head.on('click', onClickToggle);
     stateMap.position_type='closed';
 
+    //init event handler to chat closer
+    jqueryMap.$spaChatCloser.on('click', onClickRemoveSlider);
+
     return true;
   };
   // End public method /initModule/
+
+  //begin public method: removeSlider
+  removeSlider = function(){
+    if(jqueryMap.$slider){
+      jqueryMap.$slider.remove();
+      //empty jqueryMap to release unuse object
+      jqueryMap = {};
+    }
+
+    //update state map
+    stateMap.$append_target = null;
+    stateMap.position_type = sliderStateEnum.CLOSED;
+
+    //update config map
+    configMap.chat_model = null;
+    configMap.people_model = null;
+    configMap.set_chat_anchor = null;
+
+    return true;
+
+  };
 
   // return public methods
   return {
     configModule : configModule,
     initModule   : initModule,
-    setSliderPosition:setSliderPosition
+    setSliderPosition:setSliderPosition,
+    removeSlider: removeSlider,
+    sliderStateEnum: sliderStateEnum
   };
   //------------------- END PUBLIC METHODS ---------------------
 }());
