@@ -55,6 +55,10 @@ spa.chat = (function () {
       slider_opened_title  : 'Click to close',
       slider_closed_title  : 'Click to open',
 
+      //for resize control
+      slider_opened_min_em : 10,
+      window_height_min_em : 20,
+
       chat_model      : null,
       people_model    : null,
       set_chat_anchor : null
@@ -127,11 +131,20 @@ spa.chat = (function () {
 //TODO: what it means?
 //calculate the pixel sizes for elements
   setPxSizes = function () {
-      var px_per_em, opened_height_em;
+      var px_per_em, 
+      opened_height_em,
+      window_height_em;
 
       px_per_em = getEmSize( jqueryMap.$slider.get(0) );
 
-      opened_height_em = configMap.slider_opened_em;
+      window_height_em = Math.floor(
+      ( $(window).height() / px_per_em ) + 0.5
+    );
+
+      opened_height_em
+      = window_height_em > configMap.window_height_min_em
+      ? configMap.slider_opened_em
+      : configMap.slider_opened_min_em;
 
       stateMap.px_per_em        = px_per_em;
       stateMap.slider_closed_px = configMap.slider_closed_em * px_per_em;
@@ -227,7 +240,11 @@ spa.chat = (function () {
 
   //click event handler to response to close slider action
   onClickRemoveSlider = function(event){
-    removeSlider();
+    //removeSlider();
+    var set_chat_anchor = configMap.set_chat_anchor;
+    //trigger hash change
+    set_chat_anchor(sliderStateEnum.HIDDEN);
+
     return false;
   }
 
@@ -304,7 +321,7 @@ spa.chat = (function () {
 
     //update state map
     stateMap.$append_target = null;
-    stateMap.position_type = sliderStateEnum.CLOSED;
+    stateMap.position_type = sliderStateEnum.HIDDEN;
 
     //update config map
     configMap.chat_model = null;
@@ -315,13 +332,29 @@ spa.chat = (function () {
 
   };
 
+  //public method: handleResize
+  handleResize = function(){
+    if(!jqueryMap.$slider){
+      return false;
+    }
+
+    setPxSizes();
+
+    //set slider style
+    if(stateMap.position_type === sliderStateEnum.OPENED){
+      jqueryMap.$slider.css({height: stateMap.slider_opened_px});
+    }
+    return true;
+  };
+
   // return public methods
   return {
     configModule : configModule,
     initModule   : initModule,
     setSliderPosition:setSliderPosition,
     removeSlider: removeSlider,
-    sliderStateEnum: sliderStateEnum
+    sliderStateEnum: sliderStateEnum,
+    handleResize: handleResize
   };
   //------------------- END PUBLIC METHODS ---------------------
 }());

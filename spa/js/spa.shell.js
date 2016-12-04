@@ -34,17 +34,20 @@ spa.shell = (function () {
       chat_retract_height  : 15,
       chat_extended_title  : 'Click to retract',
       chat_retracted_title : 'Click to extend',
+      resize_interval:200,//200ms for resize interval
       anchor_schema_map : {
           chat : {
               opened: true, 
-              closed: true
+              closed: true,
+              hidden: true
             }
       }
     },
     stateMap  = { 
         $container : null,
         // is_chat_retracted : true,
-        anchor_map : {}
+        anchor_map : {},
+        resize_idto : undefined
      },
     jqueryMap = {},
 
@@ -54,7 +57,8 @@ spa.shell = (function () {
     setChatAnchor,
     copyAnchorMap,
     changeAnchorPart,
-    onHashchange;
+    onHashchange,
+    onResize;
   //----------------- END MODULE SCOPE VARIABLES ---------------
 
   //-------------------- BEGIN UTILITY METHODS -----------------
@@ -167,19 +171,21 @@ spa.shell = (function () {
 
   // };
 
-  //event handler for clicking chat slider
-  onClickChat = function(){
-    //   toggleChat(stateMap.is_chat_retracted);
-    //use uri anchor to change application state instead of directly call action handler
-    changeAnchorPart({
-      chat : ( stateMap.is_chat_retracted ? 'open' : 'closed' )
-    });
-      return false;
-  };
+  
   // End DOM method /setJqueryMap/
   //--------------------- END DOM METHODS ----------------------
 
   //------------------- BEGIN EVENT HANDLERS -------------------
+  //event handler for clicking chat slider
+    onClickChat = function(){
+      //   toggleChat(stateMap.is_chat_retracted);
+      //use uri anchor to change application state instead of directly call action handler
+      changeAnchorPart({
+        chat : ( stateMap.is_chat_retracted ? 'open' : 'closed' )
+      });
+        return false;
+    };
+
   onHashchange = function (event) {
 
       var
@@ -203,13 +209,16 @@ spa.shell = (function () {
       if (anchor_map_proposed.chat 
       && anchor_map_proposed.chat != anchor_map_previous.chat) {
           switch (anchor_map_proposed.chat) {
-              case 'opened':
+              case spa.chat.sliderStateEnum.OPENED:
                   // toggleChat(true);
                   is_ok = spa.chat.setSliderPosition('opened');
                   break;
-            case 'closed':
+            case spa.chat.sliderStateEnum.CLOSED:
                 // toggleChat(false);
                 is_ok = spa.chat.setSliderPosition('closed');
+                break;
+            case spa.chat.sliderStateEnum.HIDDEN:
+                is_ok = spa.chat.removeSlider();
                 break;
               default:
                 // toggleChat(false);
@@ -234,6 +243,20 @@ spa.shell = (function () {
       return false;
       
   }
+
+  //resize event handler
+  onResize = function(){
+    if(stateMap.resize_idto){return true;}
+
+    spa.chat.handleResize();
+
+    stateMap.resize_idto = setTimeout(
+      function(){stateMap.resize_idto=undefined;},
+    configMap.resize_interval
+    );
+    return true;
+  };
+
   //-------------------- END EVENT HANDLERS --------------------
 
 //callback for setting chat anchor
@@ -270,6 +293,7 @@ setChatAnchor = function ( position_type ){
 
     //bind onhashchange event handler
     $(window)
+    .on('resize', onResize)
     .on('hashchange', onHashchange)
     .trigger('hashchange');//ensure hashchange event trigger for initial request
 
