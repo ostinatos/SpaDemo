@@ -36,18 +36,22 @@ spa.shell = (function () {
       chat_retract_height: 15,
       chat_extended_title: 'Click to retract',
       chat_retracted_title: 'Click to extend',
-      anchor_schema_map: {
-        chat: {
-          opened: true,
-          closed: true
-        }
+      resize_interval:200,//200ms for resize interval
+      anchor_schema_map : {
+          chat : {
+              opened: true, 
+              closed: true,
+              hidden: true
+            }
       }
     },
-    stateMap = {
-      $container: null,
-      // is_chat_retracted : true,
-      anchor_map: {}
-    },
+    stateMap  = { 
+        $container : null,
+        // is_chat_retracted : true,
+        anchor_map : {},
+        resize_idto : undefined
+     },
+
     jqueryMap = {},
 
     setJqueryMap, initModule,
@@ -59,7 +63,9 @@ spa.shell = (function () {
     onHashchange,
     onTapAccount,
     onLogin,
-    onLogout;
+    onLogout,
+    onResize;
+
   //----------------- END MODULE SCOPE VARIABLES ---------------
 
   //-------------------- BEGIN UTILITY METHODS -----------------
@@ -202,6 +208,16 @@ spa.shell = (function () {
   //--------------------- END DOM METHODS ----------------------
 
   //------------------- BEGIN EVENT HANDLERS -------------------
+  //event handler for clicking chat slider
+    onClickChat = function(){
+      //   toggleChat(stateMap.is_chat_retracted);
+      //use uri anchor to change application state instead of directly call action handler
+      changeAnchorPart({
+        chat : ( stateMap.is_chat_retracted ? 'open' : 'closed' )
+      });
+        return false;
+    };
+
   onHashchange = function (event) {
 
     var
@@ -225,23 +241,28 @@ spa.shell = (function () {
     //behavior about chat slider
     if (anchor_map_proposed.chat
       && anchor_map_proposed.chat != anchor_map_previous.chat) {
-      switch (anchor_map_proposed.chat) {
-        case 'opened':
-          // toggleChat(true);
-          is_ok = spa.chat.setSliderPosition('opened');
-          break;
-        case 'closed':
-          // toggleChat(false);
-          is_ok = spa.chat.setSliderPosition('closed');
-          break;
-        default:
-          // toggleChat(false);
-          spa.chat.setSliderPosition('closed');
-          delete anchor_map_proposed.chat;//delete unformal parameters
-          $.uriAnchor.setAnchor(anchor_map_proposed, null, true);
-          break;
+        switch (anchor_map_proposed.chat) {
+              case spa.chat.sliderStateEnum.OPENED:
+                  // toggleChat(true);
+                  is_ok = spa.chat.setSliderPosition('opened');
+                  break;
+            case spa.chat.sliderStateEnum.CLOSED:
+                // toggleChat(false);
+                is_ok = spa.chat.setSliderPosition('closed');
+                break;
+            case spa.chat.sliderStateEnum.HIDDEN:
+                is_ok = spa.chat.removeSlider();
+                break;
+              default:
+                // toggleChat(false);
+                spa.chat.setSliderPosition('closed');
+                delete anchor_map_proposed.chat;//delete unformal parameters
+                $.uriAnchor.setAnchor( anchor_map_proposed, null, true );
+                  break;
+          }
+
       }
-    }
+    
 
     if (!is_ok) {
       if (anchor_map_previous) {
@@ -256,13 +277,25 @@ spa.shell = (function () {
 
     return false;
 
-  }
+  };
 
   onLogin = function (event, login_user) {
     jqueryMap.$acct.text(login_user.name);
   };
   onLogout = function (event, logout_user) {
     jqueryMap.$acct.text('Please sign-in');
+  };
+  //resize event handler
+  onResize = function(){
+    if(stateMap.resize_idto){return true;}
+
+    spa.chat.handleResize();
+
+    stateMap.resize_idto = setTimeout(
+      function(){stateMap.resize_idto=undefined;},
+    configMap.resize_interval
+    );
+    return true;
   };
 
   //-------------------- END EVENT HANDLERS --------------------
@@ -302,6 +335,7 @@ spa.shell = (function () {
     //bind onhashchange event handler
     $(window)
       .on('hashchange', onHashchange)
+      .on('resize', onResize)
       .trigger('hashchange');//ensure hashchange event trigger for initial request
 
       //bind user tab event handler
@@ -320,6 +354,5 @@ spa.shell = (function () {
 };
 // End PUBLIC method /initModule/
 
-return { initModule: initModule };
-  //------------------- END PUBLIC METHODS ---------------------
+return { initModule: initModule };  //------------------- END PUBLIC METHODS ---------------------
 } ());
